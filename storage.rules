@@ -1,0 +1,17 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function member(space) {
+      return request.auth != null && request.auth.uid in
+        firestore.get(/databases/(default)/documents/spaces/$(space)).data.memberIds;
+    }
+    match /spaces/{space}/photos/{uid}/{id} {
+      allow read: if member(space);
+      allow create: if member(space) && request.auth.uid == uid &&
+        request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/(jpeg|png|webp)');
+      allow update, delete: if false;
+    }
+    match /{path=**} { allow read, write: if false; }
+  }
+}
